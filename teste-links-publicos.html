@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Links Públicos - AMBI360</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196f3;
+        }
+        .steps {
+            background: #f3e5f5;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid #9c27b0;
+        }
+        .steps ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .example {
+            background: #e8f5e8;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid #4caf50;
+        }
+        .code {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 3px;
+            font-family: monospace;
+            margin: 10px 0;
+            word-break: break-all;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #2196f3;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 5px;
+        }
+        .btn:hover {
+            background: #1976d2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔗 Sistema de Links Públicos - AMBI360</h1>
+        
+        <div class="info">
+            <h3>✅ Funcionalidade Implementada!</h3>
+            <p>Agora cada projeto tem um link público que pode ser acessado de qualquer dispositivo, em qualquer lugar, sem necessidade de login administrativo.</p>
+        </div>
+
+        <div class="steps">
+            <h3>📋 Como usar:</h3>
+            <ol>
+                <li>Acesse o painel administrativo (index.html)</li>
+                <li>Faça login com a senha: <strong>admin123</strong></li>
+                <li>Na lista de projetos, cada projeto agora tem um campo com o link público</li>
+                <li>Clique em "📋 Copiar Link" para copiar o link</li>
+                <li>Compartilhe o link com qualquer pessoa</li>
+            </ol>
+        </div>
+
+        <div class="example">
+            <h3>🌐 Formato dos Links:</h3>
+            <p>Os links públicos seguem este formato:</p>
+            <div class="code">
+                http://seudominio.com/view.html?project=nome-do-projeto
+            </div>
+            <p><strong>Exemplo:</strong></p>
+            <div class="code">
+                http://localhost/AMBI-360/frontend/view.html?project=meu-projeto-360
+            </div>
+        </div>
+
+        <div class="info">
+            <h3>📱 Compatibilidade:</h3>
+            <ul>
+                <li>✅ Funciona em computadores (Windows, Mac, Linux)</li>
+                <li>✅ Funciona em celulares (Android, iPhone)</li>
+                <li>✅ Funciona em tablets (iPad, Android)</li>
+                <li>✅ Não precisa instalar nada</li>
+                <li>✅ Funciona em qualquer navegador moderno</li>
+            </ul>
+        </div>
+
+        <div class="example">
+            <h3>🔧 Arquivos Criados/Modificados:</h3>
+            <ul>
+                <li><strong>view.html</strong> - Página pública para visualizar projetos</li>
+                <li><strong>script.js</strong> - Adicionadas funções para links públicos</li>
+                <li><strong>style.css</strong> - Estilos para o campo de link</li>
+            </ul>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <a href="index.html" class="btn">🔐 Acessar Painel Admin</a>
+            <a href="view.html?project=exemplo" class="btn">👁️ Testar Link Público</a>
+        </div>
+
+        <div style="margin-top: 30px; padding: 15px; background: #fff3cd; border-radius: 5px; border-left: 4px solid #ffc107;">
+            <h4>⚠️ Importante:</h4>
+            <p>Para que os links funcionem de qualquer lugar, você precisa hospedar os arquivos em um servidor web (Apache, Nginx, etc.) ou serviço de hospedagem online.</p>
+        </div>
+    </div>
+</body>
+</html>

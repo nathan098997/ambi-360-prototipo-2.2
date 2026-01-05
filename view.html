@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tour Virtual 360° - AMBI360</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="hotspots.css">
+    <link rel="stylesheet" href="https://cdn.pannellum.org/2.5/pannellum.css">
+</head>
+<body>
+    <div class="viewer-container">
+        <div class="viewer-header">
+            <h1 id="projectTitle">Tour Virtual 360°</h1>
+            <div class="viewer-controls">
+                <button onclick="toggleFullscreen()">⛶ Tela Cheia</button>
+            </div>
+        </div>
+        <div id="panorama" style="width: 100%; height: calc(100vh - 80px);"></div>
+    </div>
+
+    <script src="https://cdn.pannellum.org/2.5/pannellum.js"></script>
+    <script>
+        // Carregar projetos do localStorage
+        function loadProjects() {
+            const saved = localStorage.getItem('ambi360_projects');
+            return saved ? JSON.parse(saved) : {};
+        }
+
+        // Carregar projeto público
+        function loadPublicProject() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const projectName = urlParams.get('project');
+            
+            if (!projectName) {
+                document.body.innerHTML = '<div style="text-align: center; padding: 50px; color: white;"><h2>Projeto não encontrado</h2><p>O link pode estar incorreto.</p></div>';
+                return;
+            }
+            
+            const projects = loadProjects();
+            const project = projects[projectName];
+            
+            if (!project) {
+                document.body.innerHTML = '<div style="text-align: center; padding: 50px; color: white;"><h2>Projeto não encontrado</h2><p>O projeto não existe.</p></div>';
+                return;
+            }
+            
+            // Mostrar projeto
+            document.getElementById('projectTitle').textContent = project.title;
+            
+            const viewer = pannellum.viewer('panorama', {
+                type: 'equirectangular',
+                panorama: project.image,
+                autoLoad: true,
+                hotSpots: (project.hotspots || []).map(h => ({
+                    id: h.id,
+                    pitch: h.pitch,
+                    yaw: h.yaw,
+                    type: 'info',
+                    text: h.text
+                }))
+            });
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', loadPublicProject);
+    </script>
+</body>
+</html>

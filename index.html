@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AMBI360 - Tours Virtuais 360°</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="hotspots.css">
+    <link rel="stylesheet" href="https://cdn.pannellum.org/2.5/pannellum.css">
+</head>
+<body>
+    <!-- Login Container -->
+    <main class="login-container" id="loginContainer">
+        <section class="login-box">
+            <div class="login-header">
+                <div class="logo">
+                    <img src="logo-ambi360.svg" alt="AMBI360" style="width: 120px; height: 120px;">
+                </div>
+                <h2>AMBI360 - Admin</h2>
+                <p class="subtitle">Digite a senha para acessar</p>
+            </div>
+            <form id="adminForm">
+                <div class="input-group">
+                    <input type="password" id="adminPassword" placeholder="Digite: admin123" required>
+                </div>
+                <button type="submit" class="btn-primary w-100">Entrar</button>
+            </form>
+            <div id="errorMessage" class="error hidden"></div>
+        </section>
+    </main>
+
+    <!-- Admin Panel -->
+    <section class="admin-panel hidden" id="adminPanel">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h3>AMBI360</h3>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active" onclick="showSection('projects')">
+                    <span>📋 Projetos</span>
+                </a>
+                <a href="#" class="nav-item" onclick="showSection('create')">
+                    <span>➕ Criar Projeto</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <button class="logout-btn" onclick="logout()">Sair</button>
+            </div>
+        </div>
+
+        <div class="admin-content">
+            <header class="content-header">
+                <h1 id="pageTitle">Projetos</h1>
+                <button class="btn-primary" onclick="showSection('create')">➕ Criar Projeto</button>
+            </header>
+
+            <!-- Projects Section -->
+            <section id="projectsSection">
+                <div class="projects-filter">
+                    <label for="sortOrder">Ordenar por:</label>
+                    <select id="sortOrder" onchange="updateProjectsGrid()">
+                        <option value="newest">Mais recentes primeiro</option>
+                        <option value="oldest">Mais antigos primeiro</option>
+                    </select>
+                </div>
+                <div class="projects-grid" id="projectsGrid"></div>
+                <div class="empty-state hidden" id="emptyState">
+                    <h3>Nenhum projeto encontrado</h3>
+                    <p>Crie seu primeiro projeto 360°</p>
+                </div>
+            </section>
+
+            <!-- Create Project Section -->
+            <section id="createSection" class="hidden">
+                <form id="createProjectForm">
+                    <div class="form-group">
+                        <label>Nome do Projeto</label>
+                        <input type="text" id="projectName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Título do Projeto</label>
+                        <input type="text" id="projectTitle" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Imagem 360°</label>
+                        <input type="file" id="imageUpload" accept="image/*" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Logo (Opcional)</label>
+                        <input type="file" id="logoUpload" accept="image/*">
+                    </div>
+                    
+                    <!-- Preview da Imagem -->
+                    <div id="imagePreview" class="hidden">
+                        <h3>Preview 360°</h3>
+                        <div class="preview-controls">
+                            <button type="button" id="addHotspotBtn" class="btn-secondary">Adicionar Ponto</button>
+                            <button type="button" id="clearHotspotsBtn" class="btn-danger">Limpar Pontos</button>
+                        </div>
+                        <div id="previewPanorama" style="width: 100%; height: 400px;"></div>
+                        <div id="hotspotsList"></div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary">Criar Projeto</button>
+                        <button type="button" class="btn-secondary" onclick="showSection('projects')">Cancelar</button>
+                    </div>
+                </form>
+            </section>
+        </div>
+    </section>
+
+    <!-- Viewer Container -->
+    <section class="viewer-container hidden" id="viewerContainer">
+        <header class="viewer-header">
+            <h1 id="viewerTitle">Projeto</h1>
+            <div class="viewer-controls">
+                <button onclick="backToAdmin()">← Voltar</button>
+                <button onclick="toggleFullscreen()">⛶ Tela Cheia</button>
+            </div>
+        </header>
+        <div id="panorama" style="width: 100%; height: calc(100vh - 80px);"></div>
+    </section>
+
+    <script src="https://cdn.pannellum.org/2.5/pannellum.js"></script>
+    <script>
+        const ADMIN_PASSWORD = 'admin123';
+        let projects = {};
+        let viewer = null;
+        let previewViewer = null;
+        let hotspots = [];
+        let addingHotspot = false;
+        let editingProject = null;
+
+        function loadProjects() {
+            const saved = localStorage.getItem('ambi360_projects');
+            return saved ? JSON.parse(saved) : {};
+        }
+
+        function saveProjects() {
+            localStorage.setItem('ambi360_projects', JSON.stringify(projects));
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            projects = loadProjects();
+            setupEventListeners();
+            updateProjectsGrid();
+        });
+
+        function setupEventListeners() {
+            document.getElementById('adminForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const password = document.getElementById('adminPassword').value;
+                if (password === ADMIN_PASSWORD) {
+                    showAdminPanel();
+                } else {
+                    showError('Senha incorreta!');
+                }
+            });
+
+            document.getElementById('createProjectForm').addEventListener('submit', handleCreateProject);
+            document.getElementById('imageUpload').addEventListener('change', handleImageUpload);
+            document.getElementById('addHotspotBtn').addEventListener('click', toggleAddHotspot);
+            document.getElementById('clearHotspotsBtn').addEventListener('click', clearHotspots);
+        }
+
+        function showAdminPanel() {
+            document.getElementById('loginContainer').classList.add('hidden');
+            document.getElementById('adminPanel').classList.remove('hidden');
+            updateProjectsGrid();
+        }
+
+        function showSection(section) {
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            document.getElementById('projectsSection').classList.add('hidden');
+            document.getElementById('createSection').classList.add('hidden');
+            
+            if (section === 'projects') {
+                document.getElementById('projectsSection').classList.remove('hidden');
+                document.getElementById('pageTitle').textContent = 'Projetos';
+                document.querySelectorAll('.nav-item')[0].classList.add('active');
+                resetCreateForm();
+            } else if (section === 'create') {
+                document.getElementById('createSection').classList.remove('hidden');
+                document.getElementById('pageTitle').textContent = editingProject ? 'Editar Projeto' : 'Criar Projeto';
+                document.querySelectorAll('.nav-item')[1].classList.add('active');
+            }
+        }
+
+        function updateProjectsGrid() {
+            const grid = document.getElementById('projectsGrid');
+            const emptyState = document.getElementById('emptyState');
+            const sortOrder = document.getElementById('sortOrder')?.value || 'newest';
+            grid.innerHTML = '';
+            
+            let projectList = Object.entries(projects);
+            
+            if (projectList.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            
+            // Ordenar projetos por data
+            projectList.sort(([,a], [,b]) => {
+                const dateA = new Date(a.createdAt);
+                const dateB = new Date(b.createdAt);
+                return sortOrder === 'newest' ? dateB - dateA : dateA - dateB;
+            });
+            
+            emptyState.classList.add('hidden');
+            
+            projectList.forEach(([name, project]) => {
+                const card = document.createElement('div');
+                card.className = 'project-card';
+                card.innerHTML = `
+                    <div class="project-thumbnail">
+                        <img src="${project.image}" alt="${project.title}">
+                    </div>
+                    <div class="project-info">
+                        <h3>${project.title}</h3>
+                        <p>Criado em: ${new Date(project.createdAt).toLocaleDateString()}</p>
+                        <p>Pontos: ${project.hotspots ? project.hotspots.length : 0}</p>
+                        <div class="project-link">
+                            <input type="text" value="${generatePublicLink(name)}" readonly class="public-link-input" id="link-${name}">
+                            <button class="btn-sm btn-copy" onclick="copyPublicLink('${name}')">📋 Copiar Link</button>
+                        </div>
+                        <div class="project-actions">
+                            <button class="btn-sm btn-primary" onclick="viewProject('${name}')">👁️ Ver</button>
+                            <button class="btn-sm btn-secondary" onclick="editProject('${name}')">✏️ Editar</button>
+                            <button class="btn-sm btn-danger" onclick="deleteProject('${name}')">🗑️ Excluir</button>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function handleCreateProject(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('projectName').value.trim();
+            const title = document.getElementById('projectTitle').value.trim();
+            const imageFile = document.getElementById('imageUpload').files[0];
+            const logoFile = document.getElementById('logoUpload').files[0];
+            
+            if (!name || !title) {
+                showError('Preencha todos os campos obrigatórios!');
+                return;
+            }
+            
+            if (!imageFile && !editingProject) {
+                showError('Selecione uma imagem 360°!');
+                return;
+            }
+            
+            if (projects[name] && !editingProject) {
+                showError('Já existe um projeto com este nome!');
+                return;
+            }
+            
+            const projectData = {
+                title: title,
+                hotspots: [...hotspots],
+                createdAt: editingProject ? projects[editingProject].createdAt : new Date().toISOString(),
+                image: editingProject ? projects[editingProject].image : null,
+                logo: editingProject ? projects[editingProject].logo : null
+            };
+            
+            if (imageFile) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    projectData.image = e.target.result;
+                    processLogo(projectData, logoFile, name);
+                };
+                reader.readAsDataURL(imageFile);
+            } else {
+                processLogo(projectData, logoFile, name);
+            }
+        }
+
+        function processLogo(projectData, logoFile, name) {
+            if (logoFile) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    projectData.logo = e.target.result;
+                    saveProject(projectData, name);
+                };
+                reader.readAsDataURL(logoFile);
+            } else {
+                saveProject(projectData, name);
+            }
+        }
+
+        function saveProject(projectData, name) {
+            if (editingProject && editingProject !== name) {
+                delete projects[editingProject];
+            }
+            
+            projects[name] = projectData;
+            saveProjects();
+            
+            showSuccess(editingProject ? 'Projeto atualizado!' : 'Projeto criado!');
+            showSection('projects');
+            updateProjectsGrid();
+        }
+
+        function handleImageUpload(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    showImagePreview(e.target.result);
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function showImagePreview(imageSrc) {
+            document.getElementById('imagePreview').classList.remove('hidden');
+            
+            if (previewViewer) {
+                previewViewer.destroy();
+            }
+            
+            setTimeout(() => {
+                previewViewer = pannellum.viewer('previewPanorama', {
+                    type: 'equirectangular',
+                    panorama: imageSrc,
+                    autoLoad: true,
+                    showZoomCtrl: false,
+                    showFullscreenCtrl: false
+                });
+                
+                previewViewer.on('load', function() {
+                    setupHotspotClick();
+                    updateHotspotsList();
+                });
+            }, 100);
+        }
+
+        function setupHotspotClick() {
+            const panoramaDiv = document.getElementById('previewPanorama');
+            
+            panoramaDiv.addEventListener('click', function(e) {
+                if (!addingHotspot) return;
+                
+                e.preventDefault();
+                e.stopPropagation();
+                
+                let coords;
+                try {
+                    coords = previewViewer.mouseEventToCoords(e);
+                } catch (error) {
+                    coords = [previewViewer.getPitch(), previewViewer.getYaw()];
+                }
+                
+                const hotspot = {
+                    id: 'hotspot_' + Date.now(),
+                    pitch: coords[0],
+                    yaw: coords[1],
+                    text: 'Ponto ' + (hotspots.length + 1)
+                };
+                
+                hotspots.push(hotspot);
+                addHotspotToViewer(hotspot);
+                updateHotspotsList();
+                
+                addingHotspot = false;
+                document.getElementById('addHotspotBtn').textContent = 'Adicionar Ponto';
+                document.getElementById('addHotspotBtn').className = 'btn-secondary';
+            });
+        }
+
+        function addHotspotToViewer(hotspot) {
+            if (previewViewer) {
+                previewViewer.addHotSpot({
+                    id: hotspot.id,
+                    pitch: hotspot.pitch,
+                    yaw: hotspot.yaw,
+                    type: 'info',
+                    text: hotspot.text
+                });
+            }
+        }
+
+        function updateHotspotsList() {
+            const list = document.getElementById('hotspotsList');
+            list.innerHTML = '';
+            
+            if (hotspots.length === 0) {
+                list.innerHTML = '<p>Nenhum ponto adicionado</p>';
+                return;
+            }
+            
+            hotspots.forEach((hotspot, index) => {
+                const item = document.createElement('div');
+                item.className = 'hotspot-item';
+                item.innerHTML = `
+                    <div>
+                        <strong>Ponto ${index + 1}</strong>
+                        <input type="text" value="${hotspot.text}" onchange="updateHotspotText('${hotspot.id}', this.value)">
+                        <button onclick="removeHotspot('${hotspot.id}')" class="btn-danger btn-sm">Remover</button>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function toggleAddHotspot() {
+            addingHotspot = !addingHotspot;
+            const btn = document.getElementById('addHotspotBtn');
+            
+            if (addingHotspot) {
+                btn.textContent = 'Clique na imagem';
+                btn.className = 'btn-primary';
+            } else {
+                btn.textContent = 'Adicionar Ponto';
+                btn.className = 'btn-secondary';
+            }
+        }
+
+        function clearHotspots() {
+            hotspots = [];
+            updateHotspotsList();
+            if (previewViewer) {
+                previewViewer.removeAllHotSpots();
+            }
+        }
+
+        function updateHotspotText(id, text) {
+            const hotspot = hotspots.find(h => h.id === id);
+            if (hotspot) {
+                hotspot.text = text;
+                if (previewViewer) {
+                    previewViewer.removeHotSpot(id);
+                    addHotspotToViewer(hotspot);
+                }
+            }
+        }
+
+        function removeHotspot(id) {
+            hotspots = hotspots.filter(h => h.id !== id);
+            updateHotspotsList();
+            if (previewViewer) {
+                previewViewer.removeHotSpot(id);
+            }
+        }
+
+        function viewProject(name) {
+            const project = projects[name];
+            
+            document.getElementById('adminPanel').classList.add('hidden');
+            document.getElementById('viewerContainer').classList.remove('hidden');
+            document.getElementById('viewerTitle').textContent = project.title;
+            
+            if (viewer) {
+                viewer.destroy();
+            }
+            
+            viewer = pannellum.viewer('panorama', {
+                type: 'equirectangular',
+                panorama: project.image,
+                autoLoad: true,
+                hotSpots: (project.hotspots || []).map(h => ({
+                    id: h.id,
+                    pitch: h.pitch,
+                    yaw: h.yaw,
+                    type: 'info',
+                    text: h.text
+                }))
+            });
+        }
+
+        function editProject(name) {
+            editingProject = name;
+            const project = projects[name];
+            
+            document.getElementById('projectName').value = name;
+            document.getElementById('projectTitle').value = project.title;
+            hotspots = project.hotspots ? [...project.hotspots] : [];
+            
+            if (project.image) {
+                showImagePreview(project.image);
+            }
+            
+            showSection('create');
+        }
+
+        function deleteProject(name) {
+            if (confirm(`Excluir projeto "${projects[name].title}"?`)) {
+                delete projects[name];
+                saveProjects();
+                updateProjectsGrid();
+                showSuccess('Projeto excluído!');
+            }
+        }
+
+        function resetCreateForm() {
+            editingProject = null;
+            document.getElementById('createProjectForm').reset();
+            document.getElementById('imagePreview').classList.add('hidden');
+            hotspots = [];
+            
+            if (previewViewer) {
+                previewViewer.destroy();
+                previewViewer = null;
+            }
+        }
+
+        function backToAdmin() {
+            if (viewer) {
+                viewer.destroy();
+                viewer = null;
+            }
+            
+            document.getElementById('viewerContainer').classList.add('hidden');
+            document.getElementById('adminPanel').classList.remove('hidden');
+        }
+
+        function logout() {
+            document.getElementById('adminPanel').classList.add('hidden');
+            document.getElementById('viewerContainer').classList.add('hidden');
+            document.getElementById('loginContainer').classList.remove('hidden');
+            document.getElementById('adminForm').reset();
+            hideError();
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.classList.remove('hidden');
+            setTimeout(() => errorDiv.classList.add('hidden'), 3000);
+        }
+
+        function hideError() {
+            document.getElementById('errorMessage').classList.add('hidden');
+        }
+
+        function showSuccess(message) {
+            alert(message);
+        }
+
+        // Funções para links públicos
+        function generatePublicLink(projectName) {
+            const baseUrl = window.location.origin + window.location.pathname.replace('index.html', '');
+            return `${baseUrl}view.html?project=${encodeURIComponent(projectName)}`;
+        }
+
+        function copyPublicLink(projectName) {
+            const linkInput = document.getElementById(`link-${projectName}`);
+            linkInput.select();
+            linkInput.setSelectionRange(0, 99999);
+            
+            try {
+                document.execCommand('copy');
+                showSuccess('Link copiado!');
+            } catch (err) {
+                navigator.clipboard.writeText(linkInput.value).then(() => {
+                    showSuccess('Link copiado!');
+                }).catch(() => {
+                    showSuccess('Erro ao copiar. Copie manualmente.');
+                });
+            }
+        }
+    </script>
+</body>
+</html>

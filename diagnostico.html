@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Diagnóstico AMBI360</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test { margin: 10px 0; padding: 10px; border: 1px solid #ccc; }
+        .success { background: #d4edda; border-color: #c3e6cb; }
+        .error { background: #f8d7da; border-color: #f5c6cb; }
+        .info { background: #d1ecf1; border-color: #bee5eb; }
+        pre { background: #f8f9fa; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Diagnóstico AMBI360</h1>
+    <button onclick="runTests()">Executar Testes</button>
+    <div id="results"></div>
+
+    <script>
+        async function runTests() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<p>Executando testes...</p>';
+            
+            const tests = [];
+            
+            // Teste 1: Health Check
+            try {
+                const response = await fetch('/api/health');
+                const data = await response.json();
+                tests.push({
+                    name: 'Health Check',
+                    status: 'success',
+                    message: `API funcionando - ${data.app.name} v${data.app.version}`,
+                    data: data
+                });
+            } catch (error) {
+                tests.push({
+                    name: 'Health Check',
+                    status: 'error',
+                    message: `Erro: ${error.message}`
+                });
+            }
+            
+            // Teste 2: Login
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: 'admin', password: 'admin123' })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    localStorage.setItem('test_token', data.data.token);
+                    tests.push({
+                        name: 'Login Admin',
+                        status: 'success',
+                        message: 'Login realizado com sucesso',
+                        data: { user: data.data.user, token: data.data.token.substring(0, 20) + '...' }
+                    });
+                } else {
+                    tests.push({
+                        name: 'Login Admin',
+                        status: 'error',
+                        message: data.message || 'Falha no login'
+                    });
+                }
+            } catch (error) {
+                tests.push({
+                    name: 'Login Admin',
+                    status: 'error',
+                    message: `Erro: ${error.message}`
+                });
+            }
+            
+            // Teste 3: Listar Projetos
+            const token = localStorage.getItem('test_token');
+            if (token) {
+                try {
+                    const response = await fetch('/api/projects', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    const data = await response.json();
+                    
+                    tests.push({
+                        name: 'Listar Projetos',
+                        status: 'success',
+                        message: `${data.data ? data.data.length : 0} projetos encontrados`,
+                        data: data.data
+                    });
+                } catch (error) {
+                    tests.push({
+                        name: 'Listar Projetos',
+                        status: 'error',
+                        message: `Erro: ${error.message}`
+                    });
+                }
+            }
+            
+            // Teste 4: Verificar LocalStorage
+            const localToken = localStorage.getItem('ambi360_token');
+            tests.push({
+                name: 'Token no LocalStorage',
+                status: localToken ? 'success' : 'info',
+                message: localToken ? 'Token encontrado' : 'Nenhum token salvo',
+                data: localToken ? localToken.substring(0, 20) + '...' : null
+            });
+            
+            // Renderizar resultados
+            results.innerHTML = tests.map(test => `
+                <div class="test ${test.status}">
+                    <h3>${test.name}</h3>
+                    <p>${test.message}</p>
+                    ${test.data ? `<pre>${JSON.stringify(test.data, null, 2)}</pre>` : ''}
+                </div>
+            `).join('');
+        }
+    </script>
+</body>
+</html>
